@@ -31,6 +31,7 @@ Tests that need the `ops-toolkit` owner CLI skip clearly when it is absent.
 | Python scripts the tools shell out to (`utils/*.py`, `cli/*.py`, `workflows/*.py`) | `SOLO_OPS_ROOT` or `SOLO_OPS_SCRIPTS_DIR` | `../platform-ops-cli`, scripts in `infra/scripts` |
 | Brave bookmark workflow | `SOLO_DATA_LAKE_ROOT` | `../data-lake-pipelines` |
 | Delivery workflow, roles, refinement and central templates | `SOLO_ARCHITECTURE_ROOT` | `../architecture-docs` |
+| Hub registry files (`registries/email-accounts.yaml`) | `SOLO_REGISTRY_DIR` | none: the hub launcher passes its `repository-catalog` folder |
 | API endpoints/tokens | `EMPIRE_*_API`, `EMPIRE_AUTOMATION_TOKEN_*`, `EMPIRE_CLIENT_CONFIG` | see `docs/MCP-REFERENCE.md` |
 
 A tool whose script is missing fails with a clear message instead of guessing a path.

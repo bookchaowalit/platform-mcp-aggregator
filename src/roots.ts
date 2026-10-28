@@ -40,3 +40,11 @@ export function knowledgeRoot(env: NodeJS.ProcessEnv = process.env): string {
         ? resolve(env.SOLO_KNOWLEDGE_ROOT)
         : resolve(architectureRoot(env), "..", "knowledge-base");
 }
+
+/**
+ * The Solo Empire repository-catalog folder (registries/email-accounts.yaml lives under it). There is no sibling default: the hub is
+ * not a sibling checkout, so its launcher passes SOLO_REGISTRY_DIR explicitly. Returns undefined when unset.
+ */
+export function registryDir(env: NodeJS.ProcessEnv = process.env): string | undefined {
+    return env.SOLO_REGISTRY_DIR ? resolve(env.SOLO_REGISTRY_DIR) : undefined;
+}
