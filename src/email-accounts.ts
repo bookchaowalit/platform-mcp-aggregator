@@ -6,7 +6,7 @@ import { registryDir } from "./roots.js";
 
 /**
  * Read-only view of the hub's email account registry (email-accounts.yaml): which addresses exist and which services
- * each is signed up to. Every link keeps its evidence (api, inbox, manual) and confidence (confirmed, inferred,
+ * each is signed up to. Every link keeps its evidence (api, vault, inbox, manual) and confidence (confirmed, inferred,
  * unknown) so callers can tell a fact from a guess. The registry stores no secret values, only Infisical paths.
  */
 
@@ -73,7 +73,7 @@ export function getAccountServices(registry: EmailRegistry, query: AccountServic
         .filter((s) => s.accounts.length > 0);
     return {
         updated: registry.updated,
-        note: "confirmed = provider API or manual check; inferred = signup/billing mail only; unknown = not verified",
+        note: "confirmed = provider API, saved password-vault login or manual check; inferred = signup/billing mail only; unknown = not verified",
         total: services.length,
         by_confidence: count(services.flatMap((s) => s.accounts)),
         services,
