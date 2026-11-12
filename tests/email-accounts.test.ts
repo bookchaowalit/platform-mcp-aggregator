@@ -54,7 +54,7 @@ test("get_account_services filters by email, text, confidence and category", () 
 });
 
 test("missing SOLO_REGISTRY_DIR or a wrong schema fails clearly", () => {
-    assert.throws(() => loadEmailRegistry({}), /SOLO_REGISTRY_DIR is not set/);
+    assert.throws(() => loadEmailRegistry({}), /set SOLO_EMAIL_REGISTRY \(or SOLO_REGISTRY_DIR\)/);
     const bad = mkdtempSync(join(tmpdir(), "email-accounts-bad-"));
     mkdirSync(join(bad, "registries"));
     writeFileSync(join(bad, "registries", "email-accounts.yaml"), "schema_version: other\n");
@@ -75,5 +75,19 @@ test("tools answer over MCP and report a missing registry as an error", async ()
         assert.equal(Boolean(result.isError), isError);
         if (!isError) assert.equal((result.structuredContent as { total: number }).total, 1);
         await client.close();
+    }
+});
+
+test("SOLO_EMAIL_REGISTRY wins over SOLO_REGISTRY_DIR (personal records live outside the aggregate registry)", () => {
+    const empty = mkdtempSync(join(tmpdir(), "email-accounts-empty-"));
+    try {
+        const registry = loadEmailRegistry({
+            SOLO_REGISTRY_DIR: empty,
+            SOLO_EMAIL_REGISTRY: join(dir, "registries", "email-accounts.yaml"),
+        });
+        assert.equal(registry.accounts?.length, 2);
+        assert.throws(() => loadEmailRegistry({ SOLO_REGISTRY_DIR: empty }), /could not be read/);
+    } finally {
+        rmSync(empty, { recursive: true, force: true });
     }
 });

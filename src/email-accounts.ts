@@ -22,14 +22,25 @@ export type EmailRegistry = { schema_version: string; updated: string; accounts?
 
 export class EmailRegistryError extends Error {}
 
-export function loadEmailRegistry(env: NodeJS.ProcessEnv = process.env): EmailRegistry {
+/**
+ * The email registry holds personal records, so it is not part of the aggregate registry in bookchaowalit-empire
+ * (2026-11-12). SOLO_EMAIL_REGISTRY names the file in the owner's private space; without it the server falls back to
+ * SOLO_REGISTRY_DIR/registries/email-accounts.yaml (the solo-empire hub copy).
+ */
+export function emailRegistryPath(env: NodeJS.ProcessEnv = process.env): string | undefined {
+    if (env.SOLO_EMAIL_REGISTRY) return resolve(env.SOLO_EMAIL_REGISTRY);
     const dir = registryDir(env);
-    if (!dir) throw new EmailRegistryError("SOLO_REGISTRY_DIR is not set; start the server from the solo-empire hub launcher");
+    return dir ? resolve(dir, "registries", "email-accounts.yaml") : undefined;
+}
+
+export function loadEmailRegistry(env: NodeJS.ProcessEnv = process.env): EmailRegistry {
+    const path = emailRegistryPath(env);
+    if (!path) throw new EmailRegistryError("set SOLO_EMAIL_REGISTRY (or SOLO_REGISTRY_DIR) to find email-accounts.yaml");
     let data: EmailRegistry;
     try {
-        data = parse(readFileSync(resolve(dir, "registries", "email-accounts.yaml"), "utf-8"));
+        data = parse(readFileSync(path, "utf-8"));
     } catch {
-        throw new EmailRegistryError("email-accounts.yaml could not be read from SOLO_REGISTRY_DIR/registries");
+        throw new EmailRegistryError("email-accounts.yaml could not be read from SOLO_EMAIL_REGISTRY or SOLO_REGISTRY_DIR/registries");
     }
     if (data?.schema_version !== EMAIL_ACCOUNTS_SCHEMA) {
         throw new EmailRegistryError(`email-accounts.yaml schema_version is not ${EMAIL_ACCOUNTS_SCHEMA}`);

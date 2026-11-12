@@ -23,6 +23,6 @@ tool มี `readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`,
 ไม่มี caller-controlled filesystem/subprocess options และไม่มี raw-output fallback.
 
 `email-accounts.ts` registers `list_email_accounts` and `get_account_services`, read-only views of the hub's
-`email-accounts.yaml` (found through `SOLO_REGISTRY_DIR`): which addresses exist and which services each is signed
+`email-accounts.yaml` (found through `SOLO_EMAIL_REGISTRY`, else `SOLO_REGISTRY_DIR/registries`): which addresses exist and which services each is signed
 up to. Every link keeps its `evidence` and `confidence`; an `inferred` or `unknown` link must be reported as
 unverified. The registry holds Infisical paths, never secret values.
