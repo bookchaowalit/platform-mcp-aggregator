@@ -25,7 +25,7 @@ flowchart LR
     Start --> Verify["tools/list in a new session"]
 ```
 
-Sources: `src/**`, `README.md`, `PRODUCT.md`, `~/solo-empire/infra/scripts/agent/harness_mcp.py` (read-only)
+Sources: `src/**`, `README.md`, `PRODUCT.md`, `~/bookchaowalit-empire/infra/scripts/agent/harness_mcp.py` (read-only)
 
 - RTO / RPO: not defined (ไม่มีในเอกสาร repo). สำหรับ server เอง RPO ไม่เกี่ยว (ไม่มี state).
 - ไม่มี backup workflow ใน `.github/workflows/`.

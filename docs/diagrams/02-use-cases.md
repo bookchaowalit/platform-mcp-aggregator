@@ -63,7 +63,7 @@ flowchart LR
     Owner -->|"confirm=true"| UC13
 ```
 
-Sources: `src/index.ts`, `src/tools/*.ts`, `src/crm-ledger.ts`, `src/task-store.ts` (`automationToken`), `~/solo-empire/infra/scripts/agent/harness_mcp.py` (hub launcher, read-only)
+Sources: `src/index.ts`, `src/tools/*.ts`, `src/crm-ledger.ts`, `src/task-store.ts` (`automationToken`), `~/bookchaowalit-empire/infra/scripts/agent/harness_mcp.py` (hub launcher, read-only)
 
 รวม 40 tools จาก 15 modules (นับจาก `server.tool` / `server.registerTool` ใน `src/tools/`).
 

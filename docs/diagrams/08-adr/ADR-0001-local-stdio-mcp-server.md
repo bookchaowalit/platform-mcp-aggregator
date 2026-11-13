@@ -13,7 +13,7 @@ Agents ของ owner ต้องการ typed tools เหนือระ�
 - `src/index.ts`: `new StdioServerTransport()`, `server.connect(transport)`, name `solo-empire` version `1.0.0`
 - `package.json`: dependency `@modelcontextprotocol/sdk`, scripts `start`/`dev`
 - `PRODUCT.md` Operating Context: "Not deployed: runs as a stdio process on the owner's machine"
-- hub launcher `~/solo-empire/infra/scripts/agent/harness_mcp.py` execs `node_modules/.bin/tsx src/index.ts`
+- hub launcher `~/bookchaowalit-empire/infra/scripts/agent/harness_mcp.py` execs `node_modules/.bin/tsx src/index.ts`
 
 ## Consequences
 - session เดิมไม่เห็น tool ใหม่จนกว่าจะ restart (`README.md`)

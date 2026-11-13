@@ -28,7 +28,7 @@ flowchart TB
     Entry -->|"HTTPS"| Hosted["Tasks API, goals and roles-skills cells, CRM ledger"]
 ```
 
-Sources: `~/solo-empire/.mcp.json`, `~/solo-empire/infra/scripts/agent/harness_mcp.py` (read-only, hub), `src/roots.ts`, `src/task-store.ts`, `README.md`, `PRODUCT.md`
+Sources: `~/bookchaowalit-empire/.mcp.json`, `~/bookchaowalit-empire/infra/scripts/agent/harness_mcp.py` (read-only, hub), `src/roots.ts`, `src/task-store.ts`, `README.md`, `PRODUCT.md`
 
 Release step สำหรับ owner: `git pull` + `npm ci` ใน checkout แล้ว restart session และตรวจ `tools/list` (`README.md`). Launcher พิมพ์ "MCP dependencies are missing; run npm ci ..." ถ้าไม่มี `tsx` หรือ `src/index.ts`.
 

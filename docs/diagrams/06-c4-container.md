@@ -27,4 +27,4 @@ C4Container
     Rel(server, yaml, "readFileSync")
 ```
 
-Sources: `src/index.ts`, `src/task-store.ts` (`clientConfigPath`, `automationToken`), `src/crm-ledger.ts` (`ledgerToken`, `AbortSignal.timeout(30_000)`), `src/tools/free-images.ts`, `src/delivery-context.ts`, `.github/workflows/ci.yml` (`node-version: "22"`), `~/solo-empire/infra/scripts/agent/harness_mcp.py` (read-only)
+Sources: `src/index.ts`, `src/task-store.ts` (`clientConfigPath`, `automationToken`), `src/crm-ledger.ts` (`ledgerToken`, `AbortSignal.timeout(30_000)`), `src/tools/free-images.ts`, `src/delivery-context.ts`, `.github/workflows/ci.yml` (`node-version: "22"`), `~/bookchaowalit-empire/infra/scripts/agent/harness_mcp.py` (read-only)
