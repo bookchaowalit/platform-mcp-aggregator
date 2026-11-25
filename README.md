@@ -31,7 +31,7 @@ Tests that need the `ops-toolkit` owner CLI skip clearly when it is absent.
 | Python scripts the tools shell out to (`utils/*.py`, `cli/*.py`, `workflows/*.py`) | `SOLO_OPS_ROOT` or `SOLO_OPS_SCRIPTS_DIR` | `../platform-ops-cli`, scripts in `infra/scripts` |
 | Brave bookmark workflow | `SOLO_DATA_LAKE_ROOT` | `../data-lake-pipelines` |
 | Delivery workflow, roles, refinement and central templates | `SOLO_ARCHITECTURE_ROOT` | `../architecture-docs` |
-| Architecture document tooling (`scripts/delivery_context.py`), used when the document tree has no `scripts/` (SPEC-001) | `SOLO_ARCHITECTURE_TOOLS` | `../platform-ops-cli/architecture` |
+| Architecture document tooling (`scripts/delivery_context.py`, SPEC-001). Order: a non-empty `SOLO_ARCHITECTURE_TOOLS` always wins; else the tree's own `scripts/` (legacy); else this default | `SOLO_ARCHITECTURE_TOOLS` | `$SOLO_OPS_ROOT/architecture` (`../platform-ops-cli/architecture`) |
 | Email account registry (`email-accounts.yaml`, personal records) | `SOLO_EMAIL_REGISTRY` (file), else `SOLO_REGISTRY_DIR/registries/` | none: the hub launcher passes its `repository-catalog` folder |
 | API endpoints/tokens | `EMPIRE_*_API`, `EMPIRE_AUTOMATION_TOKEN_*`, `EMPIRE_CLIENT_CONFIG` | see `docs/MCP-REFERENCE.md` |
 
@@ -40,7 +40,7 @@ A tool whose script is missing fails with a clear message instead of guessing a 
 ## Delivery context
 
 `get_delivery_context` อ่านนิยาม workflow, role, เอกสาร, refinement และแม่แบบกลาง
-ผ่าน exporter ที่กำหนดไว้ใน `architecture-docs/scripts/delivery_context.py` เท่านั้น
+ผ่าน exporter `scripts/delivery_context.py` เท่านั้น: จาก `SOLO_ARCHITECTURE_TOOLS` ถ้าตั้งไว้ (ชนะเสมอ), ไม่เช่นนั้นจาก `scripts/` ใน document tree (layout เดิม), ไม่เช่นนั้นจาก `platform-ops-cli/architecture` (SPEC-001)
 รองรับ `view`: `overview`, `role`, `workflow`, `documents`, `refinement`, `artifact`.
 ตัวอย่าง arguments: `{"view":"refinement","role":"business-analyst","step":"BA03"}`.
 `role` view ต้องระบุ role; `artifact` view ใช้ `artifact_id` จากผลอ่านก่อนหน้า
