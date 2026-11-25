@@ -31,6 +31,7 @@ Tests that need the `ops-toolkit` owner CLI skip clearly when it is absent.
 | Python scripts the tools shell out to (`utils/*.py`, `cli/*.py`, `workflows/*.py`) | `SOLO_OPS_ROOT` or `SOLO_OPS_SCRIPTS_DIR` | `../platform-ops-cli`, scripts in `infra/scripts` |
 | Brave bookmark workflow | `SOLO_DATA_LAKE_ROOT` | `../data-lake-pipelines` |
 | Delivery workflow, roles, refinement and central templates | `SOLO_ARCHITECTURE_ROOT` | `../architecture-docs` |
+| Architecture document tooling (`scripts/delivery_context.py`), used when the document tree has no `scripts/` (SPEC-001) | `SOLO_ARCHITECTURE_TOOLS` | `../platform-ops-cli/architecture` |
 | Email account registry (`email-accounts.yaml`, personal records) | `SOLO_EMAIL_REGISTRY` (file), else `SOLO_REGISTRY_DIR/registries/` | none: the hub launcher passes its `repository-catalog` folder |
 | API endpoints/tokens | `EMPIRE_*_API`, `EMPIRE_AUTOMATION_TOKEN_*`, `EMPIRE_CLIENT_CONFIG` | see `docs/MCP-REFERENCE.md` |
 

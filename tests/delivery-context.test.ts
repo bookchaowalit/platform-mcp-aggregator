@@ -337,10 +337,88 @@ test("missing exporter and disallowed or symlinked roots never spawn", async () 
     mkdirSync(sensitive, { recursive: true });
     const missing = join(directory, "missing-script");
     mkdirSync(missing);
+    const noTools = join(directory, "absent-tools");
     for (const root of [link, sensitive, missing, join(directory, "absent"), `${f.root}/../architecture-docs`]) {
-        safeFailure(await getDeliveryContext({}, { env: { SOLO_ARCHITECTURE_ROOT: root }, execute }), "unavailable");
+        safeFailure(await getDeliveryContext({}, { env: { SOLO_ARCHITECTURE_ROOT: root, SOLO_ARCHITECTURE_TOOLS: noTools }, execute }), "unavailable");
     }
     assert.equal(calls, 0);
+});
+
+function toolsFixture(f: ReturnType<typeof fixture>) {
+    rmSync(join(f.root, "scripts"), { recursive: true });
+    const tools = join(directory, `architecture-tools-${fixtureCount}`);
+    mkdirSync(join(tools, "scripts"), { recursive: true });
+    writeFileSync(join(tools, "scripts/delivery_context.py"), "# Offline fixture\n");
+    f.dependencies.env = { ...f.dependencies.env, SOLO_ARCHITECTURE_TOOLS: tools };
+    return tools;
+}
+
+test("a document tree without the exporter runs it from the architecture tools folder (SPEC-001)", async () => {
+    const f = fixture({ view: "workflow", step: "PD01" });
+    const tools = toolsFixture(f);
+    let called = false;
+    f.dependencies.execute = async (_command, args, options) => {
+        called = true;
+        assert.deepEqual(args, [join(tools, "scripts/delivery_context.py"), "--json", "--view", "workflow", "--step", "PD01"]);
+        assert.equal(options.cwd, f.root);
+        assert.equal(options.env.SOLO_ARCHITECTURE_ROOT, f.root);
+        assert.equal(options.env.EMPIRE_CLIENT_CONFIG, "/nonexistent");
+        return { stdout: JSON.stringify(f.result) };
+    };
+    assert.deepEqual(await getDeliveryContext({ view: "workflow", step: "PD01" }, f.dependencies), f.result);
+    assert.equal(called, true);
+});
+
+test("an unsafe or symlinked architecture tools exporter never spawns", async () => {
+    let calls = 0;
+    const execute = async () => { calls++; return { stdout: "DO_NOT_DISCLOSE" }; };
+    const traversal = fixture();
+    const tools = toolsFixture(traversal);
+    safeFailure(await getDeliveryContext({}, { env: { ...traversal.dependencies.env, SOLO_ARCHITECTURE_TOOLS: `${tools}/../x` }, execute }), "unavailable", "unsafe_path");
+    const linked = fixture();
+    const linkedTools = toolsFixture(linked);
+    rmSync(join(linkedTools, "scripts/delivery_context.py"));
+    symlinkSync(join(linked.root, sourceRelative), join(linkedTools, "scripts/delivery_context.py"));
+    safeFailure(await getDeliveryContext({}, { ...linked.dependencies, execute }), "unavailable", "unsafe_path");
+    // A dangling scripts/ symlink in the document tree is unsafe, not "absent": no fallback.
+    const dangling = fixture();
+    const danglingTools = toolsFixture(dangling);
+    const opsRootDir = join(directory, `ops-${fixtureCount}`);
+    mkdirSync(opsRootDir);
+    symlinkSync(danglingTools, join(opsRootDir, "architecture"));
+    const { SOLO_ARCHITECTURE_TOOLS: _explicit, ...danglingEnv } = dangling.dependencies.env ?? {};
+    symlinkSync(join(directory, "nowhere"), join(dangling.root, "scripts"));
+    safeFailure(await getDeliveryContext({}, { env: { ...danglingEnv, SOLO_OPS_ROOT: opsRootDir }, execute }), "unavailable", "unsafe_path");
+    // The ops root that the default tools path derives from gets the same raw-value check.
+    const opsTraversal = fixture();
+    const opsTools = toolsFixture(opsTraversal);
+    const { SOLO_ARCHITECTURE_TOOLS: _unused, ...withoutTools } = opsTraversal.dependencies.env ?? {};
+    safeFailure(await getDeliveryContext({}, { env: { ...withoutTools, SOLO_OPS_ROOT: `${dirname(opsTools)}/x/..` }, execute }), "unavailable", "unsafe_path");
+    assert.equal(calls, 0);
+});
+
+test("an empty tools setting and an unused ops root never block the in-tree exporter", async () => {
+    const f = fixture({ view: "workflow", step: "PD01" });
+    f.dependencies.env = { ...f.dependencies.env, SOLO_ARCHITECTURE_TOOLS: "", SOLO_OPS_ROOT: "/x/../y" };
+    f.dependencies.execute = async (_command, args) => {
+        assert.equal(args[0], join(f.root, "scripts/delivery_context.py"));
+        return { stdout: JSON.stringify(f.result) };
+    };
+    assert.deepEqual(await getDeliveryContext({ view: "workflow", step: "PD01" }, f.dependencies), f.result);
+});
+
+test("an explicit tools folder wins over an exporter left in the document tree", async () => {
+    const f = fixture({ view: "workflow", step: "PD01" });
+    const tools = join(directory, `explicit-tools-${fixtureCount}`);
+    mkdirSync(join(tools, "scripts"), { recursive: true });
+    writeFileSync(join(tools, "scripts/delivery_context.py"), "# Offline fixture\n");
+    f.dependencies.env = { ...f.dependencies.env, SOLO_ARCHITECTURE_TOOLS: tools, SOLO_OPS_ROOT: "/x/../y" };
+    f.dependencies.execute = async (_command, args, options) => {
+        assert.equal(args[0], join(tools, "scripts/delivery_context.py"));
+        assert.equal(options.env.SOLO_ARCHITECTURE_ROOT, f.root);
+        return { stdout: JSON.stringify(f.result) };
+    };
+    assert.deepEqual(await getDeliveryContext({ view: "workflow", step: "PD01" }, f.dependencies), f.result);
 });
 
 test("exporter script and registered source symlinks are rejected", async () => {

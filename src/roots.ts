@@ -34,6 +34,20 @@ export function architectureRoot(env: NodeJS.ProcessEnv = process.env): string {
     return sibling("SOLO_ARCHITECTURE_ROOT", "architecture-docs", env);
 }
 
+/**
+ * Architecture document tooling (scripts/delivery_context.py and the other guards), moved out of the
+ * document tree into platform-ops-cli/architecture (SPEC-001, knowledge store
+ * plans/architecture-docs-store/). Override: SOLO_ARCHITECTURE_TOOLS.
+ */
+export function architectureToolsRoot(env: NodeJS.ProcessEnv = process.env): string {
+    // Operator configuration, not request input. Before getDeliveryContext uses this folder it refuses
+    // ".." and denied components in whichever raw value decides it (SOLO_ARCHITECTURE_TOOLS, or
+    // SOLO_OPS_ROOT for the default), then checks the exporter path component by component (no
+    // symlinks) before spawning.
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+    return env.SOLO_ARCHITECTURE_TOOLS ? resolve(env.SOLO_ARCHITECTURE_TOOLS) : resolve(opsRoot(env), "architecture");
+}
+
 /** Policy documents use the architecture checkout's sibling, including custom architecture roots. */
 export function knowledgeRoot(env: NodeJS.ProcessEnv = process.env): string {
     return env.SOLO_KNOWLEDGE_ROOT !== undefined
