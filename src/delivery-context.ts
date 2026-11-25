@@ -4,7 +4,7 @@ import { closeSync, constants, fstatSync, lstatSync, openSync, readSync } from "
 import { isAbsolute, join, parse, relative, resolve, sep } from "node:path";
 import { z } from "zod";
 import { parseDocument, visit } from "yaml";
-import { architectureRoot, knowledgeRoot } from "./roots.js";
+import { architectureRoot, architectureToolsRoot, knowledgeRoot } from "./roots.js";
 
 export const DELIVERY_CONTEXT_CONTRACT = "solo-empire.delivery-context.v1";
 export const DELIVERY_CONTEXT_VIEWS = ["overview", "role", "workflow", "documents", "refinement", "artifact"] as const;
@@ -145,6 +145,12 @@ function safePath(path: string, kind: "directory" | "file"): void {
         if ((!final || kind === "directory") && !stat.isDirectory()) throw new DeliveryContextError("unsafe_path");
         if (final && kind === "file" && (!stat.isFile() || stat.size > MAX_BYTES)) throw new DeliveryContextError("unsafe_path");
     }
+}
+
+/** True when anything (a file, a folder or a symlink) sits at path; safePath decides if it is usable. */
+function pathPresent(path: string): boolean {
+    try { lstatSync(path); return true; }
+    catch { return false; }
 }
 
 function safeOptionalRoot(path: string): void {
@@ -447,7 +453,14 @@ export async function getDeliveryContext(input: DeliveryContextQuery = {}, depen
         if (configuredKnowledge !== undefined && (!configuredKnowledge || configuredKnowledge.split(/[\\/]/).some((part) => part === ".." || deniedComponent(part)))) throw new DeliveryContextError("unsafe_path");
         const policyRoot = knowledgeRoot(env);
         safeOptionalRoot(policyRoot);
-        const script = join(root, "scripts", "delivery_context.py");
+        // Legacy layout: the exporter sits inside the document tree. Otherwise (a store snapshot or a
+        // checkout without tools, SPEC-001) it runs from the architecture tools folder and is told
+        // where the documents are through SOLO_ARCHITECTURE_ROOT.
+        const configuredTools = env.SOLO_ARCHITECTURE_TOOLS;
+        if (configuredTools !== undefined && (!configuredTools || configuredTools.split(/[\\/]/).some((part) => part === ".." || deniedComponent(part)))) throw new DeliveryContextError("unsafe_path");
+        const legacyScript = join(root, "scripts", "delivery_context.py");
+        const inTree = pathPresent(legacyScript);
+        const script = inTree ? legacyScript : join(architectureToolsRoot(env), "scripts", "delivery_context.py");
         safePath(script, "file");
         const args = [script, "--json", "--view", query.view];
         if (query.role) args.push("--role", query.role);
@@ -459,6 +472,7 @@ export async function getDeliveryContext(input: DeliveryContextQuery = {}, depen
             env: {
                 PATH: env.PATH, LANG: "C.UTF-8", PYTHONIOENCODING: "utf-8", PYTHONNOUSERSITE: "1", EMPIRE_CLIENT_CONFIG: "/nonexistent",
                 ...(configuredKnowledge !== undefined ? { SOLO_KNOWLEDGE_ROOT: policyRoot } : {}),
+                ...(inTree ? {} : { SOLO_ARCHITECTURE_ROOT: root }),
             },
         });
         if (typeof result.stdout !== "string" || Buffer.byteLength(result.stdout, "utf8") > MAX_BYTES) throw new DeliveryContextError("output_limit");
