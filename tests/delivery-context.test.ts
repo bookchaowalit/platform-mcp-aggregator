@@ -381,14 +381,14 @@ test("an unsafe or symlinked architecture tools exporter never spawns", async ()
     symlinkSync(join(linked.root, sourceRelative), join(linkedTools, "scripts/delivery_context.py"));
     safeFailure(await getDeliveryContext({}, { ...linked.dependencies, execute }), "unavailable", "unsafe_path");
     // A dangling scripts/ symlink in the document tree is unsafe, not "absent": no fallback.
+    // The ops root holds a real, valid exporter, so only the dangling symlink can cause the refusal.
     const dangling = fixture();
-    const danglingTools = toolsFixture(dangling);
     const opsRootDir = join(directory, `ops-${fixtureCount}`);
-    mkdirSync(opsRootDir);
-    symlinkSync(danglingTools, join(opsRootDir, "architecture"));
-    const { SOLO_ARCHITECTURE_TOOLS: _explicit, ...danglingEnv } = dangling.dependencies.env ?? {};
+    mkdirSync(join(opsRootDir, "architecture", "scripts"), { recursive: true });
+    writeFileSync(join(opsRootDir, "architecture", "scripts/delivery_context.py"), "# Offline fixture\n");
+    rmSync(join(dangling.root, "scripts"), { recursive: true });
     symlinkSync(join(directory, "nowhere"), join(dangling.root, "scripts"));
-    safeFailure(await getDeliveryContext({}, { env: { ...danglingEnv, SOLO_OPS_ROOT: opsRootDir }, execute }), "unavailable", "unsafe_path");
+    safeFailure(await getDeliveryContext({}, { env: { ...dangling.dependencies.env, SOLO_OPS_ROOT: opsRootDir }, execute }), "unavailable", "unsafe_path");
     // The ops root that the default tools path derives from gets the same raw-value check.
     const opsTraversal = fixture();
     const opsTools = toolsFixture(opsTraversal);
@@ -405,6 +405,33 @@ test("an empty tools setting and an unused ops root never block the in-tree expo
         return { stdout: JSON.stringify(f.result) };
     };
     assert.deepEqual(await getDeliveryContext({ view: "workflow", step: "PD01" }, f.dependencies), f.result);
+});
+
+test("without scripts/ in the tree the exporter under SOLO_OPS_ROOT/architecture runs", async () => {
+    const f = fixture({ view: "workflow", step: "PD01" });
+    rmSync(join(f.root, "scripts"), { recursive: true });
+    const opsRootDir = join(directory, `ops-fallback-${fixtureCount}`);
+    mkdirSync(join(opsRootDir, "architecture", "scripts"), { recursive: true });
+    writeFileSync(join(opsRootDir, "architecture", "scripts/delivery_context.py"), "# Offline fixture\n");
+    let called = false;
+    const execute = async (_command: string, args: string[], options: any) => {
+        called = true;
+        assert.equal(args[0], join(opsRootDir, "architecture", "scripts/delivery_context.py"));
+        assert.equal(options.env.SOLO_ARCHITECTURE_ROOT, f.root);
+        return { stdout: JSON.stringify(f.result) };
+    };
+    assert.deepEqual(await getDeliveryContext({ view: "workflow", step: "PD01" }, { env: { ...f.dependencies.env, SOLO_OPS_ROOT: opsRootDir }, execute }), f.result);
+    assert.equal(called, true);
+});
+
+test("a role catalog above the old 50-role bound is accepted (live catalog had 55)", async () => {
+    const f = fixture({ view: "workflow", step: "PD01" });
+    const ids = ["product-manager", "business-analyst", "finance-accounting", ...Array.from({ length: 52 }, (_, i) => `extra-role-${i + 1}`)];
+    const catalog = "version: 1\nkind: atomic-role-catalog\nstatus: current\nroles:\n" + ids.map((id) => `- id: ${id}\n`).join("");
+    writeFileSync(join(f.root, sourceRelative), catalog);
+    f.result.sources.find((source) => source.path === sourceRelative)!.sha256 = createHash("sha256").update(catalog).digest("hex");
+    assert.equal(ids.length, 55);
+    assert.equal((await getDeliveryContext({ view: "workflow", step: "PD01" }, f.dependencies)).status, "ready");
 });
 
 test("an empty SOLO_OPS_ROOT means unset for the default tools folder", async () => {
