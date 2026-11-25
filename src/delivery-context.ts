@@ -447,24 +447,30 @@ export async function getDeliveryContext(input: DeliveryContextQuery = {}, depen
         if (configuredKnowledge !== undefined && (!configuredKnowledge || configuredKnowledge.split(/[\\/]/).some((part) => part === ".." || deniedComponent(part)))) throw new DeliveryContextError("unsafe_path");
         const policyRoot = knowledgeRoot(env);
         safeOptionalRoot(policyRoot);
-        // Legacy layout: the exporter sits inside the document tree. Only a missing path (ENOENT
-        // after the component-by-component check) selects the architecture tools folder (SPEC-001),
-        // which is then told where the documents are through SOLO_ARCHITECTURE_ROOT; a symlink,
-        // an unreadable folder or any other error fails closed (ADR-0004).
+        // Exporter choice (SPEC-001): an explicit SOLO_ARCHITECTURE_TOOLS wins, so a caller (the ops
+        // CLI) runs its own revision even against a tree that still carries scripts/. Otherwise the
+        // legacy in-tree exporter is used, and only a missing one (ENOENT after the
+        // component-by-component check) selects the default tools folder under SOLO_OPS_ROOT; a
+        // symlink, an unreadable folder or any other error fails closed (ADR-0004). A raw override
+        // is checked only when it decides the path.
+        const unsafeRaw = (value: string) => value.split(/[\\/]/).some((part) => part === ".." || deniedComponent(part));
+        const explicitTools = env.SOLO_ARCHITECTURE_TOOLS;
         const legacyScript = join(root, "scripts", "delivery_context.py");
         let script = legacyScript;
-        let inTree = true;
-        try { safePath(legacyScript, "file"); }
-        catch (error) {
-            if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
-            inTree = false;
-            for (const name of ["SOLO_ARCHITECTURE_TOOLS", "SOLO_OPS_ROOT"] as const) {
-                const configured = env[name];
-                if (configured !== undefined && (!configured || configured.split(/[\\/]/).some((part) => part === ".." || deniedComponent(part)))) throw new DeliveryContextError("unsafe_path");
-            }
+        let inTree = false;
+        if (explicitTools) {
+            if (unsafeRaw(explicitTools)) throw new DeliveryContextError("unsafe_path");
             script = join(architectureToolsRoot(env), "scripts", "delivery_context.py");
-            safePath(script, "file");
+        } else {
+            try { safePath(legacyScript, "file"); inTree = true; }
+            catch (error) {
+                if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
+                const opsOverride = env.SOLO_OPS_ROOT;
+                if (opsOverride !== undefined && (!opsOverride || unsafeRaw(opsOverride))) throw new DeliveryContextError("unsafe_path");
+                script = join(architectureToolsRoot(env), "scripts", "delivery_context.py");
+            }
         }
+        if (!inTree) safePath(script, "file");
         const args = [script, "--json", "--view", query.view];
         if (query.role) args.push("--role", query.role);
         if (query.step) args.push("--step", query.step);

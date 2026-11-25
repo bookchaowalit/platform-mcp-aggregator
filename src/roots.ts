@@ -40,9 +40,10 @@ export function architectureRoot(env: NodeJS.ProcessEnv = process.env): string {
  * plans/architecture-docs-store/). Override: SOLO_ARCHITECTURE_TOOLS.
  */
 export function architectureToolsRoot(env: NodeJS.ProcessEnv = process.env): string {
-    // Operator configuration, not request input. When getDeliveryContext falls back to this folder it
-    // first refuses ".." and denied components in the raw SOLO_ARCHITECTURE_TOOLS and SOLO_OPS_ROOT
-    // values, then checks the exporter path component by component (no symlinks) before spawning.
+    // Operator configuration, not request input. Before getDeliveryContext uses this folder it refuses
+    // ".." and denied components in whichever raw value decides it (SOLO_ARCHITECTURE_TOOLS, or
+    // SOLO_OPS_ROOT for the default), then checks the exporter path component by component (no
+    // symlinks) before spawning.
     // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     return env.SOLO_ARCHITECTURE_TOOLS ? resolve(env.SOLO_ARCHITECTURE_TOOLS) : resolve(opsRoot(env), "architecture");
 }
