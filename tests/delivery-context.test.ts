@@ -535,7 +535,9 @@ test("owner CLI uses this shared parser and returns the same offline definition 
     const f = fixture();
     writeFileSync(join(f.root, "scripts/delivery_context.py"), `import json\nprint(${JSON.stringify(JSON.stringify(f.result))})\n`);
     const result = spawnSync(process.execPath, [join(MCP_ROOT, "node_modules/tsx/dist/cli.mjs"), join(opsRoot(), "infra/cli.ts"), "delivery", "overview", "--json"], {
-        cwd: opsRoot(), env: { ...process.env, EMPIRE_CLIENT_CONFIG: "/nonexistent", SOLO_ARCHITECTURE_ROOT: f.root, SOLO_MCP_ROOT: MCP_ROOT },
+        // The CLI passes its own architecture/ as SOLO_ARCHITECTURE_TOOLS unless told otherwise;
+        // point it at the fixture's exporter so CLI and adapter run the same offline script.
+        cwd: opsRoot(), env: { ...process.env, EMPIRE_CLIENT_CONFIG: "/nonexistent", SOLO_ARCHITECTURE_ROOT: f.root, SOLO_ARCHITECTURE_TOOLS: f.root, SOLO_MCP_ROOT: MCP_ROOT },
         encoding: "utf8", timeout: 15000,
     });
     assert.ifError(result.error);
@@ -646,7 +648,8 @@ test("real exporter, MCP and owner CLI keep alternate and missing knowledge root
                 assert.equal((result.structuredContent as any).data.body, "ก🙂");
             }
             const cli = spawnSync(process.execPath, [join(MCP_ROOT, "node_modules/tsx/dist/cli.mjs"), join(opsRoot(), "infra/cli.ts"), "delivery", "artifact", "--artifact-id", f.query.artifact_id!, "--limit", "2", "--json"], {
-                cwd: opsRoot(), env: { ...process.env, EMPIRE_CLIENT_CONFIG: "/nonexistent", SOLO_MCP_ROOT: MCP_ROOT, ...f.dependencies.env },
+                // Same exporter for CLI and adapter: the fixture's (the CLI defaults to its own architecture/).
+                cwd: opsRoot(), env: { ...process.env, EMPIRE_CLIENT_CONFIG: "/nonexistent", SOLO_MCP_ROOT: MCP_ROOT, ...f.dependencies.env, SOLO_ARCHITECTURE_TOOLS: f.root },
                 encoding: "utf8", timeout: 15000,
             });
             assert.ifError(cli.error);
