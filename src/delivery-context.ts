@@ -147,12 +147,6 @@ function safePath(path: string, kind: "directory" | "file"): void {
     }
 }
 
-/** True when anything (a file, a folder or a symlink) sits at path; safePath decides if it is usable. */
-function pathPresent(path: string): boolean {
-    try { lstatSync(path); return true; }
-    catch { return false; }
-}
-
 function safeOptionalRoot(path: string): void {
     try { safePath(path, "directory"); }
     catch (error) {
@@ -453,15 +447,24 @@ export async function getDeliveryContext(input: DeliveryContextQuery = {}, depen
         if (configuredKnowledge !== undefined && (!configuredKnowledge || configuredKnowledge.split(/[\\/]/).some((part) => part === ".." || deniedComponent(part)))) throw new DeliveryContextError("unsafe_path");
         const policyRoot = knowledgeRoot(env);
         safeOptionalRoot(policyRoot);
-        // Legacy layout: the exporter sits inside the document tree. Otherwise (a store snapshot or a
-        // checkout without tools, SPEC-001) it runs from the architecture tools folder and is told
-        // where the documents are through SOLO_ARCHITECTURE_ROOT.
-        const configuredTools = env.SOLO_ARCHITECTURE_TOOLS;
-        if (configuredTools !== undefined && (!configuredTools || configuredTools.split(/[\\/]/).some((part) => part === ".." || deniedComponent(part)))) throw new DeliveryContextError("unsafe_path");
+        // Legacy layout: the exporter sits inside the document tree. Only a missing path (ENOENT
+        // after the component-by-component check) selects the architecture tools folder (SPEC-001),
+        // which is then told where the documents are through SOLO_ARCHITECTURE_ROOT; a symlink,
+        // an unreadable folder or any other error fails closed (ADR-0004).
         const legacyScript = join(root, "scripts", "delivery_context.py");
-        const inTree = pathPresent(legacyScript);
-        const script = inTree ? legacyScript : join(architectureToolsRoot(env), "scripts", "delivery_context.py");
-        safePath(script, "file");
+        let script = legacyScript;
+        let inTree = true;
+        try { safePath(legacyScript, "file"); }
+        catch (error) {
+            if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
+            inTree = false;
+            for (const name of ["SOLO_ARCHITECTURE_TOOLS", "SOLO_OPS_ROOT"] as const) {
+                const configured = env[name];
+                if (configured !== undefined && (!configured || configured.split(/[\\/]/).some((part) => part === ".." || deniedComponent(part)))) throw new DeliveryContextError("unsafe_path");
+            }
+            script = join(architectureToolsRoot(env), "scripts", "delivery_context.py");
+            safePath(script, "file");
+        }
         const args = [script, "--json", "--view", query.view];
         if (query.role) args.push("--role", query.role);
         if (query.step) args.push("--step", query.step);

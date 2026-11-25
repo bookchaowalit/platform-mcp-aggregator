@@ -380,7 +380,27 @@ test("an unsafe or symlinked architecture tools exporter never spawns", async ()
     rmSync(join(linkedTools, "scripts/delivery_context.py"));
     symlinkSync(join(linked.root, sourceRelative), join(linkedTools, "scripts/delivery_context.py"));
     safeFailure(await getDeliveryContext({}, { ...linked.dependencies, execute }), "unavailable", "unsafe_path");
+    // A dangling scripts/ symlink in the document tree is unsafe, not "absent": no fallback.
+    const dangling = fixture();
+    toolsFixture(dangling);
+    symlinkSync(join(directory, "nowhere"), join(dangling.root, "scripts"));
+    safeFailure(await getDeliveryContext({}, { ...dangling.dependencies, execute }), "unavailable", "unsafe_path");
+    // The ops root that the default tools path derives from gets the same raw-value check.
+    const opsTraversal = fixture();
+    const opsTools = toolsFixture(opsTraversal);
+    const { SOLO_ARCHITECTURE_TOOLS: _unused, ...withoutTools } = opsTraversal.dependencies.env ?? {};
+    safeFailure(await getDeliveryContext({}, { env: { ...withoutTools, SOLO_OPS_ROOT: `${dirname(opsTools)}/x/..` }, execute }), "unavailable", "unsafe_path");
     assert.equal(calls, 0);
+});
+
+test("the tools setting is only checked when the fallback is used", async () => {
+    const f = fixture({ view: "workflow", step: "PD01" });
+    f.dependencies.env = { ...f.dependencies.env, SOLO_ARCHITECTURE_TOOLS: "" };
+    f.dependencies.execute = async (_command, args) => {
+        assert.equal(args[0], join(f.root, "scripts/delivery_context.py"));
+        return { stdout: JSON.stringify(f.result) };
+    };
+    assert.deepEqual(await getDeliveryContext({ view: "workflow", step: "PD01" }, f.dependencies), f.result);
 });
 
 test("exporter script and registered source symlinks are rejected", async () => {
