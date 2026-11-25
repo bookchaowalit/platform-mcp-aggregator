@@ -407,6 +407,15 @@ test("an empty tools setting and an unused ops root never block the in-tree expo
     assert.deepEqual(await getDeliveryContext({ view: "workflow", step: "PD01" }, f.dependencies), f.result);
 });
 
+test("an empty SOLO_OPS_ROOT means unset for the default tools folder", async () => {
+    const f = fixture();
+    rmSync(join(f.root, "scripts"), { recursive: true });
+    // No exporter in the tree, no explicit tools: "" must not be refused as an unsafe override; the
+    // default folder is then checked by safePath like any other path.
+    const result = await getDeliveryContext({}, { env: { ...f.dependencies.env, SOLO_OPS_ROOT: "" }, execute: async () => ({ stdout: JSON.stringify(f.result) }) });
+    assert.notDeepEqual((result as any).errors, [{ code: "unsafe_path" }]);
+});
+
 test("an explicit tools folder wins over an exporter left in the document tree", async () => {
     const f = fixture({ view: "workflow", step: "PD01" });
     const tools = join(directory, `explicit-tools-${fixtureCount}`);
@@ -698,7 +707,10 @@ test("source-defined family roles legitimately have empty results in all three d
     const workflow = parseDocument(readFileSync(join(root, "systems/architecture/product-delivery-workflow.yaml"), "utf8")).toJS();
     const direct = new Set(workflow.steps.flatMap((step: any) => [step.owner_role, ...step.reviewer_roles]));
     const families = catalog.roles.map((role: any) => role.id).filter((role: string) => !direct.has(role));
-    assert.equal(families.length, 39);
+    // Roles with no direct workflow step: every one must still give a ready (empty) result.
+    // The count follows the live catalog, so it is not pinned here.
+    assert.ok(families.length > 0);
+    assert.equal(families.length, catalog.roles.length - catalog.roles.filter((role: any) => direct.has(role.id)).length);
     for (const role of families) {
         for (const view of ["workflow", "documents", "refinement"] as const) {
             const query = { view, role };

@@ -214,10 +214,13 @@ function canonicalYaml(bytes: Buffer): unknown {
     } catch { throw new DeliveryContextError("invalid_provenance"); }
 }
 
+/** Upper bound on the atomic role catalog (a size limit, not the catalog's size: 55 roles on 2026-11-26). */
+const MAX_ROLES = 200;
+
 function canonicalRoles(bytes: Buffer): Set<string> {
     const catalog = canonicalYaml(bytes);
     if (!record(catalog) || catalog.version !== 1 || catalog.kind !== "atomic-role-catalog" || catalog.status !== "current"
-        || !Array.isArray(catalog.roles) || !catalog.roles.length || catalog.roles.length > 50) {
+        || !Array.isArray(catalog.roles) || !catalog.roles.length || catalog.roles.length > MAX_ROLES) {
         throw new DeliveryContextError("invalid_provenance");
     }
     const roles = new Set<string>();
@@ -465,8 +468,9 @@ export async function getDeliveryContext(input: DeliveryContextQuery = {}, depen
             try { safePath(legacyScript, "file"); inTree = true; }
             catch (error) {
                 if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
+                // An empty SOLO_OPS_ROOT means unset (as in opsRoot()); only a real override is checked.
                 const opsOverride = env.SOLO_OPS_ROOT;
-                if (opsOverride !== undefined && (!opsOverride || unsafeRaw(opsOverride))) throw new DeliveryContextError("unsafe_path");
+                if (opsOverride && unsafeRaw(opsOverride)) throw new DeliveryContextError("unsafe_path");
                 script = join(architectureToolsRoot(env), "scripts", "delivery_context.py");
             }
         }
