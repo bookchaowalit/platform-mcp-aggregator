@@ -381,6 +381,8 @@ test("a document tree without the exporter runs it from the architecture tools f
         assert.equal(options.cwd, f.root);
         assert.equal(options.env.SOLO_ARCHITECTURE_ROOT, f.root);
         assert.equal(options.env.EMPIRE_CLIENT_CONFIG, "/nonexistent");
+        // The exporter reads policies from the same knowledge root the adapter validates.
+        assert.equal(options.env.SOLO_KNOWLEDGE_ROOT, knowledgeRoot(f.dependencies.env));
         return { stdout: JSON.stringify(f.result) };
     };
     assert.deepEqual(await getDeliveryContext({ view: "workflow", step: "PD01" }, f.dependencies), f.result);

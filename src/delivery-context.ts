@@ -497,7 +497,9 @@ export async function getDeliveryContext(input: DeliveryContextQuery = {}, depen
             cwd: root, timeout: 30000, maxBuffer: MAX_BYTES,
             env: {
                 PATH: env.PATH, LANG: "C.UTF-8", PYTHONIOENCODING: "utf-8", PYTHONNOUSERSITE: "1", EMPIRE_CLIENT_CONFIG: "/nonexistent",
-                ...(configuredKnowledge !== undefined ? { SOLO_KNOWLEDGE_ROOT: policyRoot } : {}),
+                // Always the root this adapter validates against, so exporter and checks agree
+                // (also when it is the resolved knowledge-base snapshot).
+                SOLO_KNOWLEDGE_ROOT: policyRoot,
                 ...(inTree ? {} : { SOLO_ARCHITECTURE_ROOT: root }),
             },
         });
