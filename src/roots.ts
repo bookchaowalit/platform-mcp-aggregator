@@ -45,13 +45,14 @@ function architectureSnapshot(env: NodeJS.ProcessEnv): string | undefined {
 }
 
 /**
- * Architecture definitions and central templates. Override: SOLO_ARCHITECTURE_ROOT; else the
- * sibling checkout; else the store snapshot, resolved (refreshes swap its folder symlink, and the
- * delivery adapter refuses symlinked path components).
+ * Architecture definitions and central templates. Override: SOLO_ARCHITECTURE_ROOT; else the store
+ * snapshot, resolved (refreshes swap its folder symlink, and the delivery adapter refuses symlinked
+ * path components); else the sibling checkout. Since the SPEC-001 phase 3 cutover (2026-11-26) the
+ * store is the source and a checkout is frozen, so the snapshot wins.
  */
 export function architectureRoot(env: NodeJS.ProcessEnv = process.env): string {
     const checkout = sibling("SOLO_ARCHITECTURE_ROOT", "architecture-docs", env);
-    if (env.SOLO_ARCHITECTURE_ROOT || existsSync(checkout)) return checkout;
+    if (env.SOLO_ARCHITECTURE_ROOT) return checkout;
     const snapshot = architectureSnapshot(env);
     return snapshot ? realpathSync(snapshot) : checkout;
 }

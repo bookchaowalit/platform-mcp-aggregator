@@ -223,14 +223,14 @@ function safeFailure(result: unknown, status = "invalid", code?: string) {
     assert.ok(!JSON.stringify(data).includes("DO_NOT_DISCLOSE"));
 }
 
-test("without a checkout the store snapshot is used, resolved, with its knowledge snapshot beside it (SPEC-001)", () => {
+test("the store snapshot is used, resolved, even beside a checkout, with its knowledge snapshot beside it (SPEC-001)", () => {
     const cache = join(directory, "cache-solo-empire");
     const version = join(cache, "architecture-docs.versions", "v1");
     mkdirSync(version, { recursive: true });
     writeFileSync(join(version, ".snapshot.json"), "{}");
     symlinkSync(version, join(cache, "architecture-docs"));
     const env = { SOLO_ARCHITECTURE_SNAPSHOT: join(cache, "architecture-docs") };
-    if (existsSync(resolve(MCP_ROOT, "../architecture-docs"))) return; // a real sibling checkout wins
+    // A sibling checkout (frozen since the phase 3 cutover) does not change the answer.
     assert.equal(architectureRoot(env), fs.realpathSync(version));
     assert.equal(knowledgeRoot(env), join(cache, "knowledge-base"));  // absent: the plain path
     const knowledgeVersion = join(cache, "knowledge-base.versions", "v1");
