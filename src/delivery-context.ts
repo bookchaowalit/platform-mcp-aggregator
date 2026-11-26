@@ -147,6 +147,12 @@ function safePath(path: string, kind: "directory" | "file"): void {
     }
 }
 
+/** True when anything (file, folder or symlink) is at path. */
+function pathPresent(path: string): boolean {
+    try { lstatSync(path); return true; }
+    catch { return false; }
+}
+
 function safeOptionalRoot(path: string): void {
     try { safePath(path, "directory"); }
     catch (error) {
@@ -461,8 +467,15 @@ export async function getDeliveryContext(input: DeliveryContextQuery = {}, depen
         const legacyScript = join(root, "scripts", "delivery_context.py");
         let script = legacyScript;
         let inTree = false;
+        // A store snapshot (.snapshot.json, SPEC-001) holds whatever was written to the store:
+        // its scripts/ is never executed, the ops tooling always is.
+        const snapshotTree = pathPresent(join(root, ".snapshot.json"));
         if (explicitTools) {
             if (unsafeRaw(explicitTools)) throw new DeliveryContextError("unsafe_path");
+            script = join(architectureToolsRoot(env), "scripts", "delivery_context.py");
+        } else if (snapshotTree) {
+            const opsOverride = env.SOLO_OPS_ROOT;
+            if (opsOverride && unsafeRaw(opsOverride)) throw new DeliveryContextError("unsafe_path");
             script = join(architectureToolsRoot(env), "scripts", "delivery_context.py");
         } else {
             try { safePath(legacyScript, "file"); inTree = true; }
