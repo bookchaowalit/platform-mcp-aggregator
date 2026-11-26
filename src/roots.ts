@@ -77,13 +77,17 @@ export function architectureToolsRoot(env: NodeJS.ProcessEnv = process.env): str
 /** Policy documents use the architecture checkout's sibling, including custom architecture roots. */
 export function knowledgeRoot(env: NodeJS.ProcessEnv = process.env): string {
     if (env.SOLO_KNOWLEDGE_ROOT !== undefined) return resolve(env.SOLO_KNOWLEDGE_ROOT);
-    const checkout = sibling("SOLO_ARCHITECTURE_ROOT", "architecture-docs", env);
-    const snapshot = !env.SOLO_ARCHITECTURE_ROOT && !existsSync(checkout) ? architectureSnapshot(env) : undefined;
+    // Same order as architectureRoot: after the SPEC-001 phase 3 cutover the snapshot wins.
+    const snapshot = !env.SOLO_ARCHITECTURE_ROOT ? architectureSnapshot(env) : undefined;
     // Beside the architecture snapshot sits the knowledge-base snapshot (same cache folder). It is a
     // symlink swapped by refreshes too, and the adapter refuses symlinked components: resolve it.
     if (snapshot) {
         // The knowledge snapshot's own setting wins (as the hub's knowledge_snapshot.py uses it).
-        const knowledge = env.SOLO_KNOWLEDGE_SNAPSHOT ? resolve(env.SOLO_KNOWLEDGE_SNAPSHOT) : join(dirname(snapshot), "knowledge-base");
+        const configured = env.SOLO_KNOWLEDGE_SNAPSHOT;
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+        const expanded = configured && configured.startsWith("~/") && env.HOME ? join(env.HOME, configured.slice(2)) : configured;
+        // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+        const knowledge = expanded ? resolve(expanded) : join(dirname(snapshot), "knowledge-base");
         return existsSync(knowledge) ? realpathSync(knowledge) : knowledge;
     }
     return resolve(architectureRoot(env), "..", "knowledge-base");

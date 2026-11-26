@@ -241,6 +241,17 @@ test("the store snapshot is used, resolved, even beside a checkout, with its kno
     assert.equal(architectureRoot(env), resolve(MCP_ROOT, "../architecture-docs"));
 });
 
+test("a ~/ knowledge snapshot override is expanded, and the snapshot beats a checkout", () => {
+    const home = join(directory, "tilde-home-k");
+    const version = join(home, "arch", "v1");
+    mkdirSync(version, { recursive: true });
+    writeFileSync(join(version, ".snapshot.json"), "{}");
+    const knowledge = join(home, "kb");
+    mkdirSync(knowledge, { recursive: true });
+    const env = { HOME: home, SOLO_ARCHITECTURE_SNAPSHOT: "~/arch/v1", SOLO_KNOWLEDGE_SNAPSHOT: "~/kb" };
+    assert.equal(knowledgeRoot(env), fs.realpathSync(knowledge));
+});
+
 test("a ~/ snapshot override is expanded against HOME", () => {
     const home = join(directory, "tilde-home");
     const version = join(home, "snap.versions", "v1");
