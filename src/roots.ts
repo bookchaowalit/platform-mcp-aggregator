@@ -39,9 +39,10 @@ function architectureSnapshot(env: NodeJS.ProcessEnv): string | undefined {
     const configured = env.SOLO_ARCHITECTURE_SNAPSHOT;
     // Operator configuration, not request input; the delivery adapter checks the chosen root
     // component by component (no "..", denied names or symlinks) before reading or spawning.
-    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     // "~/" is expanded as a shell would (the hub's launcher and the Python readers accept it too).
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const expanded = configured && configured.startsWith("~/") && env.HOME ? join(env.HOME, configured.slice(2)) : configured;
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const folder = expanded ? resolve(expanded) : env.HOME ? join(env.HOME, ".cache", "solo-empire", "architecture-docs") : undefined;
     return folder && existsSync(join(folder, ".snapshot.json")) ? folder : undefined;
 }
