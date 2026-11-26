@@ -75,8 +75,13 @@ export function knowledgeRoot(env: NodeJS.ProcessEnv = process.env): string {
     if (env.SOLO_KNOWLEDGE_ROOT !== undefined) return resolve(env.SOLO_KNOWLEDGE_ROOT);
     const checkout = sibling("SOLO_ARCHITECTURE_ROOT", "architecture-docs", env);
     const snapshot = !env.SOLO_ARCHITECTURE_ROOT && !existsSync(checkout) ? architectureSnapshot(env) : undefined;
-    // Beside the architecture snapshot sits the knowledge-base snapshot (same cache folder).
-    return snapshot ? join(dirname(snapshot), "knowledge-base") : resolve(architectureRoot(env), "..", "knowledge-base");
+    // Beside the architecture snapshot sits the knowledge-base snapshot (same cache folder). It is a
+    // symlink swapped by refreshes too, and the adapter refuses symlinked components: resolve it.
+    if (snapshot) {
+        const knowledge = join(dirname(snapshot), "knowledge-base");
+        return existsSync(knowledge) ? realpathSync(knowledge) : knowledge;
+    }
+    return resolve(architectureRoot(env), "..", "knowledge-base");
 }
 
 /**
