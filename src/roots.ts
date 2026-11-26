@@ -1,4 +1,5 @@
-import { dirname, resolve } from "path";
+import { existsSync, realpathSync } from "fs";
+import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 
 /**
@@ -29,9 +30,30 @@ export function dataLakeRoot(env: NodeJS.ProcessEnv = process.env): string {
     return sibling("SOLO_DATA_LAKE_ROOT", "data-lake-pipelines", env);
 }
 
-/** Architecture definitions and central templates. Override: SOLO_ARCHITECTURE_ROOT. */
+/**
+ * The store snapshot of space architecture-docs (SPEC-001 phase 2), when one exists: the folder
+ * SOLO_ARCHITECTURE_SNAPSHOT, else $HOME/.cache/solo-empire/architecture-docs, with its
+ * .snapshot.json stamp. Only the passed env is read, so tests stay hermetic.
+ */
+function architectureSnapshot(env: NodeJS.ProcessEnv): string | undefined {
+    const configured = env.SOLO_ARCHITECTURE_SNAPSHOT;
+    // Operator configuration, not request input; the delivery adapter checks the chosen root
+    // component by component (no "..", denied names or symlinks) before reading or spawning.
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+    const folder = configured ? resolve(configured) : env.HOME ? join(env.HOME, ".cache", "solo-empire", "architecture-docs") : undefined;
+    return folder && existsSync(join(folder, ".snapshot.json")) ? folder : undefined;
+}
+
+/**
+ * Architecture definitions and central templates. Override: SOLO_ARCHITECTURE_ROOT; else the
+ * sibling checkout; else the store snapshot, resolved (refreshes swap its folder symlink, and the
+ * delivery adapter refuses symlinked path components).
+ */
 export function architectureRoot(env: NodeJS.ProcessEnv = process.env): string {
-    return sibling("SOLO_ARCHITECTURE_ROOT", "architecture-docs", env);
+    const checkout = sibling("SOLO_ARCHITECTURE_ROOT", "architecture-docs", env);
+    if (env.SOLO_ARCHITECTURE_ROOT || existsSync(checkout)) return checkout;
+    const snapshot = architectureSnapshot(env);
+    return snapshot ? realpathSync(snapshot) : checkout;
 }
 
 /**
@@ -50,9 +72,11 @@ export function architectureToolsRoot(env: NodeJS.ProcessEnv = process.env): str
 
 /** Policy documents use the architecture checkout's sibling, including custom architecture roots. */
 export function knowledgeRoot(env: NodeJS.ProcessEnv = process.env): string {
-    return env.SOLO_KNOWLEDGE_ROOT !== undefined
-        ? resolve(env.SOLO_KNOWLEDGE_ROOT)
-        : resolve(architectureRoot(env), "..", "knowledge-base");
+    if (env.SOLO_KNOWLEDGE_ROOT !== undefined) return resolve(env.SOLO_KNOWLEDGE_ROOT);
+    const checkout = sibling("SOLO_ARCHITECTURE_ROOT", "architecture-docs", env);
+    const snapshot = !env.SOLO_ARCHITECTURE_ROOT && !existsSync(checkout) ? architectureSnapshot(env) : undefined;
+    // Beside the architecture snapshot sits the knowledge-base snapshot (same cache folder).
+    return snapshot ? join(dirname(snapshot), "knowledge-base") : resolve(architectureRoot(env), "..", "knowledge-base");
 }
 
 /**

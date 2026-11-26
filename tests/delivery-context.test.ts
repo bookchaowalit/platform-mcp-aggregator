@@ -223,6 +223,20 @@ function safeFailure(result: unknown, status = "invalid", code?: string) {
     assert.ok(!JSON.stringify(data).includes("DO_NOT_DISCLOSE"));
 }
 
+test("without a checkout the store snapshot is used, resolved, with its knowledge snapshot beside it (SPEC-001)", () => {
+    const cache = join(directory, "cache-solo-empire");
+    const version = join(cache, "architecture-docs.versions", "v1");
+    mkdirSync(version, { recursive: true });
+    writeFileSync(join(version, ".snapshot.json"), "{}");
+    symlinkSync(version, join(cache, "architecture-docs"));
+    const env = { SOLO_ARCHITECTURE_SNAPSHOT: join(cache, "architecture-docs") };
+    if (existsSync(resolve(MCP_ROOT, "../architecture-docs"))) return; // a real sibling checkout wins
+    assert.equal(architectureRoot(env), fs.realpathSync(version));
+    assert.equal(knowledgeRoot(env), join(cache, "knowledge-base"));
+    rmSync(join(version, ".snapshot.json"));
+    assert.equal(architectureRoot(env), resolve(MCP_ROOT, "../architecture-docs"));
+});
+
 test("architecture checkout uses the explicit owner root or a sibling, without hub lookup", () => {
     assert.equal(architectureRoot({}), resolve(MCP_ROOT, "../architecture-docs"));
     assert.equal(architectureRoot({ SOLO_ARCHITECTURE_ROOT: directory }), directory);
