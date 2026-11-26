@@ -232,7 +232,11 @@ test("without a checkout the store snapshot is used, resolved, with its knowledg
     const env = { SOLO_ARCHITECTURE_SNAPSHOT: join(cache, "architecture-docs") };
     if (existsSync(resolve(MCP_ROOT, "../architecture-docs"))) return; // a real sibling checkout wins
     assert.equal(architectureRoot(env), fs.realpathSync(version));
-    assert.equal(knowledgeRoot(env), join(cache, "knowledge-base"));
+    assert.equal(knowledgeRoot(env), join(cache, "knowledge-base"));  // absent: the plain path
+    const knowledgeVersion = join(cache, "knowledge-base.versions", "v1");
+    mkdirSync(knowledgeVersion, { recursive: true });
+    symlinkSync(knowledgeVersion, join(cache, "knowledge-base"));
+    assert.equal(knowledgeRoot(env), fs.realpathSync(knowledgeVersion));  // present: resolved
     rmSync(join(version, ".snapshot.json"));
     assert.equal(architectureRoot(env), resolve(MCP_ROOT, "../architecture-docs"));
 });
