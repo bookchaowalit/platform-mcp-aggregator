@@ -241,6 +241,14 @@ test("the store snapshot is used, resolved, even beside a checkout, with its kno
     assert.equal(architectureRoot(env), resolve(MCP_ROOT, "../architecture-docs"));
 });
 
+test("a ~/ snapshot override is expanded against HOME", () => {
+    const home = join(directory, "tilde-home");
+    const version = join(home, "snap.versions", "v1");
+    mkdirSync(version, { recursive: true });
+    writeFileSync(join(version, ".snapshot.json"), "{}");
+    assert.equal(architectureRoot({ HOME: home, SOLO_ARCHITECTURE_SNAPSHOT: "~/snap.versions/v1" }), fs.realpathSync(version));
+});
+
 test("architecture checkout uses the explicit owner root or a sibling, without hub lookup", () => {
     assert.equal(architectureRoot({}), resolve(MCP_ROOT, "../architecture-docs"));
     assert.equal(architectureRoot({ SOLO_ARCHITECTURE_ROOT: directory }), directory);
