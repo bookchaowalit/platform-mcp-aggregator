@@ -448,6 +448,19 @@ test("a role catalog above the old 50-role bound is accepted (live catalog had 5
     assert.equal((await getDeliveryContext({ view: "workflow", step: "PD01" }, f.dependencies)).status, "ready");
 });
 
+test("an exporter inside a store snapshot is never run (SPEC-001)", async () => {
+    // A snapshot holds whatever was written to the store; its scripts/ must not be executed.
+    const f = fixture({ view: "workflow", step: "PD01" });
+    writeFileSync(join(f.root, ".snapshot.json"), "{}");
+    const opsRootDir = join(directory, `ops-snapshot-${fixtureCount}`);
+    mkdirSync(join(opsRootDir, "architecture", "scripts"), { recursive: true });
+    writeFileSync(join(opsRootDir, "architecture", "scripts/delivery_context.py"), "# Offline fixture\n");
+    let script = "";
+    const execute = async (_command: string, args: string[]) => { script = args[0]; return { stdout: JSON.stringify(f.result) }; };
+    await getDeliveryContext({ view: "workflow", step: "PD01" }, { env: { ...f.dependencies.env, SOLO_OPS_ROOT: opsRootDir }, execute });
+    assert.equal(script, join(opsRootDir, "architecture", "scripts/delivery_context.py"));
+});
+
 test("an empty SOLO_OPS_ROOT means unset for the default tools folder", async () => {
     const f = fixture();
     rmSync(join(f.root, "scripts"), { recursive: true });
