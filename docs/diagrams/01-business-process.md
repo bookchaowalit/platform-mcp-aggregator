@@ -4,6 +4,8 @@
 (Claude Code, Codex ฯลฯ) เรียก typed tools แทนการเข้าถึง database หรือ shell เอง ไม่มี hosted runtime และไม่มี database ของตัวเอง:
 ทุก tool เป็น thin adapter ที่เรียก HTTP API ของ cell/CRM หรือ subprocess ไปยัง script ใน repo เจ้าของข้อมูล
 
+Last reviewed: 2026-11-27 · commit `590ec2a`
+
 ## As-Is (จากโค้ดวันนี้)
 
 ```mermaid
@@ -33,10 +35,10 @@ Sources: `src/index.ts`, `src/tools/*.ts`, `src/task-store.ts`, `src/cell-store.
 
 ขั้นตอนที่มี human gate ในโค้ด:
 - decision tools (`approve_decision`, `reject_decision`, `defer_decision`, `complete_decision`, `review_decision`) ต้องส่ง `confirm=true` มิฉะนั้นคืน `success:false` และไม่เปลี่ยนสถานะ (`src/tools/decisions.ts`)
-- `sync_decision_reviews` ค่าเริ่มต้นเป็น `--dry-run`; `fetch_free_images` และ `seo_monthly_report` ไม่เขียนไฟล์จนกว่า `apply=true`
+- `sync_decision_reviews` รัน `--dry-run` เว้นแต่ส่ง `confirm=true` จึงเป็น `--sync` (`src/tools/decisions.ts`); `fetch_free_images` และ `seo_monthly_report` ไม่เขียนไฟล์จนกว่า `apply=true`
 - `manage_brave_bookmark_proposals` สร้างแค่ proposal; การเขียน Brave profile จริงทำโดย scheduled job นอก repo นี้ (`src/tools/browser-bookmarks.ts`)
 
-## To-Be
+## To-Be (จาก PRODUCT.md)
 
 แหล่ง To-Be ที่อนุญาตมีเพียง `PRODUCT.md` (ไม่มี `specs/`, `docs/UPGRADE-PLAN.md` ใน repo). สิ่งที่ PRODUCT.md ระบุเป็นเป้าหมาย:
 - วัด "tool calls ที่ fail ด้วย unexpected error แทน defined error code" — ต้องมี local call logging ซึ่งยังไม่มี (`[ต้องยืนยัน]` ใน PRODUCT.md)
@@ -53,6 +55,15 @@ flowchart LR
 
 Sources: `PRODUCT.md` (Measures)
 
+## Gap
+
+| ID | As-Is → To-Be | Status | Owner | Evidence |
+|---|---|---|---|---|
+| G1 | ไม่มี local tool-call logging → วัดสัดส่วน call ที่ fail ด้วย unexpected error ได้ | todo | claude | `PRODUCT.md` (Measures); ไม่พบ call logging ใน `src/index.ts` |
+| G2 | มี test เฉพาะบาง module (`tests/*.test.ts`) → ทุก tool มี test ของ response contract (เป้า 0 tool ที่ไม่มี test) | todo | claude | `PRODUCT.md` (Measures); `docs/diagrams/17-test-coverage-matrix.md` |
+| G3 | ไม่มี roadmap เขียนไว้นอกเหนือ Measures → roadmap ของ owner | decide | owner | ขอให้ owner เขียน To-Be/roadmap เพิ่ม |
+
 ## Open questions
+
 - จะเก็บ local call logging ที่ไหน และไม่ส่ง tool arguments ออกนอกเครื่องอย่างไร (PRODUCT.md ห้าม third-party reporter)
-- ไม่มี To-Be อื่นใน repo (ไม่มี issues ที่อ่านได้ระบุแผน) — owner ต้องยืนยัน roadmap
+- `task check` เขียวบน `main` ทุกครั้งหรือไม่ [ต้องยืนยัน] (ยังไม่ได้ตรวจ CI ในรอบนี้)
